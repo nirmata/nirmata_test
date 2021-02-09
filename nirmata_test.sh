@@ -61,7 +61,7 @@ fi
 # Should we email by default?
 email=1
 # default sendemail containers Note NOT sendmail!
-sendemail='ssilbory/sendemail'
+sendemail='ghcr.io/nirmata/sendemail'
 alwaysemail=1
 localmail=1
 # Set this to fix local issues by default
