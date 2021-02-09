@@ -11,7 +11,7 @@
 
 version=1.1
 # Url of script for updates
-script_url='https://raw.githubusercontent.com/silborynirmata/k8_test/master/nirmata_test.sh'
+script_url='https://raw.githubusercontent.com/nirmata/k8_test/master/nirmata_test.sh'
 # Should we update
 update=1
 # default external dns target
