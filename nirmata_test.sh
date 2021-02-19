@@ -9,7 +9,7 @@
 # Test Nirmata installation mainly mongodb. --nirmata
 #    Note this script considers any nirmata installation that isn't HA to be in warning.
 
-version=1.1
+version=1.1.1
 # Url of script for updates
 script_url='https://raw.githubusercontent.com/nirmata/k8_test/master/nirmata_test.sh'
 # Should we update
@@ -76,6 +76,10 @@ df_free=80
 df_free_mongo=50
 # docker parition free space
 df_free_root=85
+#set zookeeper maxs
+zoo_latency_max=20
+zoo_node_max=50000
+
 
 if [ -f /.dockerenv ]; then
     export INDOCKER=0
@@ -486,14 +490,25 @@ zoos=$(kubectl get pod -n $zoo_ns -l 'nirmata.io/service.name in (zookeeper, zk)
 zoo_num=0
 zoo_leader=""
 for zoo in $zoos; do
-    # High node counts indicate a resource issue or a cleanup failure.
     curr_zoo=$(kubectl -n $zoo_ns exec $zoo -- sh -c "/opt/zookeeper-*/bin/zkServer.sh status" 2>&1|grep Mode)
-    zoo_node_count=$(kubectl exec $zoo -n $zoo_ns -- sh -c "echo srvr | nc localhost 2181|grep Node.count:" |awk '{ print $3; }')
-    if [ $zoo_node_count -lt 50000 ];then
+    
+    # High node counts indicate a resource issue or a cleanup failure.
+    zoo_node_count=$(kubectl exec $zoo -n $zoo_ns -- sh -c "echo srvr | nc localhost 2181" |grep Node.count: |awk '{ print $3; }')
+    if [ $zoo_node_count -lt $zoo_node_max ];then
         good $zoo node count is $zoo_node_count
     else
-        error Error $zoo node count is $zoo_node_count
+        warn $zoo node count is $zoo_node_count
+        kubectl exec $zoo -n $zoo_ns --  sh -c "echo srvr | nc localhost 2181"
     fi
+    # High latency indicate a resource issue
+    zoo_latency=$(kubectl exec $zoo -n $zoo_ns -- sh -c "echo srvr | nc localhost 2181" |grep Latency |tr "/" " " |awk '{ print $6; }')
+    if [ $zoo_latency -lt $zoo_latency_max ];then
+        good $zoo node latency is $zoo_latency
+    else
+        warn $zoo node count is $zoo_latency
+        kubectl exec $zoo -n $zoo_ns -- kubectl exec $zoo -n $zoo_ns -- sh -c "echo srvr | nc localhost 2181"
+    fi
+
     if [[  $curr_zoo =~ "leader" ]];then
         echo "$zoo is zookeeper leader"
         zoo_leader="$zoo_leader $zoo"
